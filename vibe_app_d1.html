@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Detective: Business Case Solver</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3b82f6; 
+            border-radius: 4px;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+        }
+        .ai-thinking {
+            animation: pulse-glow 1.5s infinite;
+        }
+        
+        @keyframes red-glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.5); border-color: #ef4444; }
+            50% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.9); border-color: #ef4444; }
+        }
+        .instructor-active {
+            color: #ef4444 !important; /* 아이콘 색상도 붉게 변경 */
+            animation: red-glow 2s infinite;
+        }
+        .instructor-active i {
+             color: #ef4444 !important;
+        }
+
+        .step-content {
+            display: none;
+        }
+        .step-content.active {
+            display: block;
+        }
+
+        /* Chart Bars */
+        .bar-container {
+            position: relative;
+            background: #334155;
+            height: 24px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            width: 0%;
+            transition: width 1s ease-out;
+        }
+        
+        /* Instructor Mode Highlights */
+        .instructor-guide {
+            border-left: 4px solid #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Clue Card */
+        .clue-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .clue-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .clue-revealed {
+            background: #1e293b !important;
+            border-color: #475569 !important;
+            cursor: default;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-slate-900 border-b border-slate-700 p-4 sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fas fa-robot text-blue-500 text-2xl"></i>
+                <div>
+                    <h1 class="text-xl font-bold text-white tracking-wider">AI DETECTIVE</h1>
+                    <p class="text-xs text-slate-400">Business Case Solver v2.5</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="prev-btn" onclick="prevStep()" class="hidden text-slate-400 hover:text-white transition px-2">
+                    <i class="fas fa-chevron-left mr-1"></i>이전
+                </button>
+                <div id="progress-indicator" class="text-sm font-medium text-blue-400">Step 1 / 6</div>
+                <div class="h-4 w-px bg-slate-700 mx-2"></div>
+                
+                <!-- Instructor Button: White Spade Icon -->
+                <button id="instructor-btn" onclick="toggleInstructorModal()" class="w-8 h-8 flex items-center justify-center border border-slate-600 rounded hover:bg-slate-800 transition group" title="접근 모드">
+                    <i class="fas fa-spade text-lg text-white transition"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow p-4 md:p-8 max-w-5xl mx-auto w-full">
+        
+        <!-- Step 1: Case Study -->
+        <div id="step-1" class="step-content active animate-fade-in">
+            <div class="glass-panel rounded-xl p-8 mb-6">
+                <div class="flex justify-between items-start mb-6">
+                    <h2 class="text-2xl font-bold text-white"><span class="text-blue-500">CASE FILE #2026-A:</span> 테크노바(TechNova)의 수익성 미스터리</h2>
+                    <span class="bg-blue-900 text-blue-200 text-xs px-2 py-1 rounded">기밀 수준: 2등급</span>
+                </div>
+
+                <div class="prose prose-invert max-w-none space-y-6 text-slate-300 leading-relaxed">
+                    <p>
+                        국내 최대 가전 기업 <strong>테크노바(TechNova)</strong>는 지난 3년간 스마트홈 사업부에서 괄목할 만한 매출 성장을 기록했습니다. 
+                        스마트 냉장고와 AI 스피커 라인업이 시장 점유율 1위를 달성하며 외형적 성장은 완벽해 보입니다. 
+                        그러나 경영진은 최근 심각한 위기감을 느끼고 있습니다. <strong>매출은 연평균 15% 성장했지만, 영업이익률은 8%에서 2%로 급락했기 때문입니다.</strong>
+                    </p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 my-8">
+                        <div class="bg-slate-800 p-6 rounded-lg border border-slate-700">
+                            <h3 class="text-lg font-semibold text-white mb-4"><i class="fas fa-chart-line mr-2"></i>최근 3년 매출 vs 영업이익</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1"><span>2023 매출</span><span>1.2조 (100%)</span></div>
+                                    <div class="bar-container"><div class="bar-fill" style="width: 60%;"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1"><span>2024 매출</span><span>1.35조 (112%)</span></div>
+                                    <div class="bar-container"><div class="bar-fill" style="width: 75%;"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1"><span>2025 매출</span><span>1.5조 (125%)</span></div>
+                                    <div class="bar-container"><div class="bar-fill" style="width: 90%;"></div></div>
+                                </div>
+                                <div class="border-t border-slate-600 pt-2 mt-2">
+                                    <div class="flex justify-between text-xs mb-1"><span class="text-red-400">2025 영업이익</span><span class="text-red-400">300억 (2%)</span></div>
+                                    <div class="bar-container"><div class="bar-fill bg-red-500" style="width: 10%; background: #ef4444;"></div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-800 p-6 rounded-lg border border-slate-700">
+                            <h3 class="text-lg font-semibold text-white mb-4"><i class="fas fa-users mr-2"></i>경쟁사 현황 (2025 기준)</h3>
+                            <ul class="space-y-3 text-sm">
+                                <li class="flex justify-between border-b border-slate-700 pb-2">
+                                    <span class="font-bold text-blue-300">테크노바 (당사)</span>
+                                    <span class="text-slate-400">시장점유율 45% / 이익률 2%</span>
+                                </li>
+                                <li class="flex justify-between border-b border-slate-700 pb-2">
+                                    <span class="font-bold text-slate-200">퓨처라이프 (경쟁사 A)</span>
+                                    <span class="text-slate-400">시장점유율 30% / 이익률 12%</span>
+                                </li>
+                                <li class="flex justify-between border-b border-slate-700 pb-2">
+                                    <span class="font-bold text-slate-200">샤오테크 (경쟁사 B)</span>
+                                    <span class="text-slate-400">시장점유율 15% / 이익률 5%</span>
+                                </li>
+                            </ul>
+                            <div class="mt-4 p-3 bg-slate-900 rounded text-xs text-slate-400">
+                                <strong>💡 용어 설명:</strong><br>
+                                * 판관비 (SG&A): 판매비와 관리비. 마케팅 비용, 물류비 등이 포함됨.<br>
+                                * 리퍼비시 (Refurbish): 반품된 제품을 수리하여 재판매하는 것.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Clue Section -->
+                    <div class="bg-slate-900/50 p-6 rounded-xl border border-slate-700">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold text-white"><i class="fas fa-search-plus text-yellow-500 mr-2"></i>추가 단서 확보</h3>
+                            <div class="text-right">
+                                <span id="penalty-display" class="text-red-400 font-bold text-sm bg-red-900/30 px-3 py-1 rounded">누적 감점: 0점</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-4"><i class="fas fa-exclamation-triangle mr-1"></i> 단서를 하나 확인할 때마다 평가 점수에서 <strong>2점씩 감점</strong>됩니다. 신중하게 선택하세요.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button onclick="revealClue(1)" id="clue-btn-1" class="clue-card bg-slate-800 p-4 rounded-lg border border-slate-600 text-left hover:border-blue-500 group">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-bold text-blue-400">단서 #1</span>
+                                    <i class="fas fa-lock text-slate-500 group-hover:text-blue-400 transition"></i>
+                                </div>
+                                <div id="clue-text-1" class="text-sm text-slate-500">클릭하여 잠금 해제 (-2점)</div>
+                            </button>
+
+                            <button onclick="revealClue(2)" id="clue-btn-2" class="clue-card bg-slate-800 p-4 rounded-lg border border-slate-600 text-left hover:border-blue-500 group">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-bold text-blue-400">단서 #2</span>
+                                    <i class="fas fa-lock text-slate-500 group-hover:text-blue-400 transition"></i>
+                                </div>
+                                <div id="clue-text-2" class="text-sm text-slate-500">클릭하여 잠금 해제 (-2점)</div>
+                            </button>
+
+                            <button onclick="revealClue(3)" id="clue-btn-3" class="clue-card bg-slate-800 p-4 rounded-lg border border-slate-600 text-left hover:border-blue-500 group">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-bold text-blue-400">단서 #3</span>
+                                    <i class="fas fa-lock text-slate-500 group-hover:text-blue-400 transition"></i>
+                                </div>
+                                <div id="clue-text-3" class="text-sm text-slate-500">클릭하여 잠금 해제 (-2점)</div>
+                            </button>
+
+                            <button onclick="revealClue(4)" id="clue-btn-4" class="clue-card bg-slate-800 p-4 rounded-lg border border-slate-600 text-left hover:border-blue-500 group">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-bold text-blue-400">단서 #4</span>
+                                    <i class="fas fa-lock text-slate-500 group-hover:text-blue-400 transition"></i>
+                                </div>
+                                <div id="clue-text-4" class="text-sm text-slate-500">클릭하여 잠금 해제 (-2점)</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-8 flex justify-end">
+                    <button onclick="nextStep(2)" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-lg font-bold shadow-lg shadow-blue-500/30 transition transform hover:scale-105">
+                        사건 조사 시작 <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Problem Definition -->
+        <div id="step-2" class="step-content">
+            <div class="glass-panel rounded-xl p-8 animate-fade-in">
+                <h2 class="text-xl font-bold text-white mb-4"><i class="fas fa-search-location text-blue-500 mr-2"></i>Step 1. 문제 정의</h2>
+                <p class="text-slate-400 mb-6">현 상황에서 테크노바가 해결해야 할 <strong>진짜 문제</strong>는 무엇입니까? 단순히 "이익이 줄었다"가 아닌, 구체적인 현상과 범위를 정의해주세요.</p>
+
+                <!-- Instructor Hint -->
+                <div class="instructor-only hidden mb-6 p-4 bg-red-900/20 border-l-4 border-red-500 rounded text-sm text-red-200">
+                    <strong>[강사 가이드]</strong><br>
+                    정답 방향: "매출은 성장하지만 반품 및 물류 비용 증가로 인해 수익 구조가 악화되고 있다."<br>
+                    핵심 키워드: 반품, 비용, 수익성, 악화
+                </div>
+
+                <textarea id="input-prob" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-4 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition h-32" placeholder="문제를 정의해 주세요..."></textarea>
+                
+                <div class="flex justify-between items-center mt-4">
+                    <div id="result-prob" class="text-sm font-bold h-6"></div>
+                    <button onclick="evaluateStep('prob', ['반품', '비용', '수익', '구조', '악화', '이익률'])" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg transition">
+                        AI 분석 요청
+                    </button>
+                </div>
+                <div id="next-btn-prob" class="hidden mt-6 text-right border-t border-slate-700 pt-4">
+                    <p class="text-green-400 text-sm mb-2"><i class="fas fa-check-circle"></i> 문제가 명확하게 정의되었습니다.</p>
+                    <button onclick="nextStep(3)" class="bg-blue-600 text-white px-6 py-2 rounded-lg">다음 단계로</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Root Cause Analysis -->
+        <div id="step-3" class="step-content">
+            <div class="glass-panel rounded-xl p-8 animate-fade-in">
+                <h2 class="text-xl font-bold text-white mb-4"><i class="fas fa-microscope text-blue-500 mr-2"></i>Step 2. 핵심 원인 파악</h2>
+                <p class="text-slate-400 mb-6">문제의 <strong>근본 원인(Root Cause)</strong>은 무엇입니까? 데이터와 단서를 기반으로 추론하세요.</p>
+
+                <div class="instructor-only hidden mb-6 p-4 bg-red-900/20 border-l-4 border-red-500 rounded text-sm text-red-200">
+                    <strong>[강사 가이드]</strong><br>
+                    정답 방향: 무분별한 무료 반품 정책으로 인한 물류비/재포장비 급증 & 설치 난이도로 인한 초기 반품율 상승.<br>
+                    핵심 키워드: 무료 반품, 설치, 어려움, 물류비, 정책
+                </div>
+
+                <textarea id="input-cause" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-4 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition h-32" placeholder="핵심 원인을 분석해 주세요..."></textarea>
+                
+                <div class="flex justify-between items-center mt-4">
+                    <div id="result-cause" class="text-sm font-bold h-6"></div>
+                    <button onclick="evaluateStep('cause', ['무료', '반품', '설치', '어렵다', '물류', '정책'])" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg transition">
+                        AI 원인 분석
+                    </button>
+                </div>
+                <div id="next-btn-cause" class="hidden mt-6 text-right border-t border-slate-700 pt-4">
+                    <p class="text-green-400 text-sm mb-2"><i class="fas fa-check-circle"></i> 원인이 정확하게 파악되었습니다.</p>
+                    <button onclick="nextStep(4)" class="bg-blue-600 text-white px-6 py-2 rounded-lg">다음 단계로</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Creative Solutions -->
+        <div id="step-4" class="step-content">
+            <div class="glass-panel rounded-xl p-8 animate-fade-in">
+                <h2 class="text-xl font-bold text-white mb-4"><i class="fas fa-lightbulb text-blue-500 mr-2"></i>Step 3. 해결 방안 도출</h2>
+                <p class="text-slate-400 mb-6">이 문제를 해결하기 위한 창의적인 아이디어 <strong>3가지 이상</strong>을 제안하세요.</p>
+                
+                <div class="instructor-only hidden mb-6 p-4 bg-red-900/20 border-l-4 border-red-500 rounded text-sm text-red-200">
+                    <strong>[강사 가이드]</strong><br>
+                    예시: 1. 설치 전문 기사 방문 서비스 도입 (유료/무료) 2. AR 기반 설치 가이드 앱 개발 3. 반품 유료화 전환 또는 멤버십 전용 혜택 변경
+                </div>
+
+                <div class="flex gap-2 mb-4">
+                    <input type="text" id="input-idea" class="flex-grow bg-slate-800 border border-slate-600 rounded-lg p-3 text-white" placeholder="아이디어를 입력하세요">
+                    <button onclick="addItem('idea')" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus"></i> 추가</button>
+                </div>
+                <ul id="list-idea" class="space-y-2 mb-6 text-slate-300 list-decimal list-inside"></ul>
+
+                <div id="next-btn-idea" class="hidden mt-6 text-right border-t border-slate-700 pt-4">
+                    <p class="text-blue-400 text-sm mb-2"><i class="fas fa-check-circle"></i> 충분한 아이디어가 모였습니다.</p>
+                    <button onclick="nextStep(5)" class="bg-blue-600 text-white px-6 py-2 rounded-lg">다음 단계로</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 5: Action Plan -->
+        <div id="step-5" class="step-content">
+            <div class="glass-panel rounded-xl p-8 animate-fade-in">
+                <h2 class="text-xl font-bold text-white mb-4"><i class="fas fa-tasks text-blue-500 mr-2"></i>Step 4. 실행 계획 수립</h2>
+                <p class="text-slate-400 mb-6">아이디어를 현실화하기 위한 구체적인 실행 계획(Action Plan) <strong>3가지 이상</strong>을 수립하세요.</p>
+
+                <div class="instructor-only hidden mb-6 p-4 bg-red-900/20 border-l-4 border-red-500 rounded text-sm text-red-200">
+                    <strong>[강사 가이드]</strong><br>
+                    구체성(Who, When, What)이 중요합니다. 예: "다음 달까지 CS팀 내에 설치 지원 전담 TF 구성"
+                </div>
+
+                <div class="flex gap-2 mb-4">
+                    <input type="text" id="input-plan" class="flex-grow bg-slate-800 border border-slate-600 rounded-lg p-3 text-white" placeholder="실행 계획을 입력하세요 (예: 1개월 내 TF 구성)">
+                    <button onclick="addItem('plan')" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus"></i> 추가</button>
+                </div>
+                <ul id="list-plan" class="space-y-2 mb-6 text-slate-300 list-decimal list-inside"></ul>
+
+                <div id="next-btn-plan" class="hidden mt-6 text-right border-t border-slate-700 pt-4">
+                    <button onclick="finishGame()" class="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white px-8 py-3 rounded-lg font-bold shadow-lg transform transition hover:scale-105">
+                        최종 보고서 제출 <i class="fas fa-file-export ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 6: Summary -->
+        <div id="step-6" class="step-content">
+            <div class="glass-panel rounded-xl p-8 animate-fade-in text-center">
+                <div class="mb-8">
+                    <i class="fas fa-clipboard-check text-6xl text-green-500 mb-4"></i>
+                    <h2 class="text-3xl font-bold text-white">미션 성공!</h2>
+                    <p class="text-slate-400">테크노바의 수익성 개선을 위한 전략이 수립되었습니다.</p>
+                </div>
+
+                <div class="text-left bg-slate-800/50 p-6 rounded-lg border border-slate-700 space-y-6">
+                    <div class="flex justify-between items-center border-b border-slate-700 pb-4">
+                        <span class="text-slate-400">최종 감점 현황</span>
+                        <span id="final-penalty" class="text-red-400 font-bold">0점</span>
+                    </div>
+
+                    <div>
+                        <h3 class="text-blue-400 font-bold text-sm uppercase tracking-wider mb-2">1. 문제 정의</h3>
+                        <p id="final-prob" class="text-slate-200 bg-slate-900 p-3 rounded"></p>
+                    </div>
+                    <div>
+                        <h3 class="text-blue-400 font-bold text-sm uppercase tracking-wider mb-2">2. 핵심 원인</h3>
+                        <p id="final-cause" class="text-slate-200 bg-slate-900 p-3 rounded"></p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <h3 class="text-blue-400 font-bold text-sm uppercase tracking-wider mb-2">3. 해결 방안</h3>
+                            <ul id="final-idea" class="text-slate-200 bg-slate-900 p-3 rounded list-disc list-inside text-sm"></ul>
+                        </div>
+                        <div>
+                            <h3 class="text-blue-400 font-bold text-sm uppercase tracking-wider mb-2">4. 실행 계획</h3>
+                            <ul id="final-plan" class="text-slate-200 bg-slate-900 p-3 rounded list-disc list-inside text-sm"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8">
+                    <button onclick="location.reload()" class="border border-slate-600 text-slate-400 hover:text-white hover:border-white px-6 py-2 rounded transition">
+                        <i class="fas fa-redo mr-2"></i>처음으로
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Instructor Login Modal -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-black/80 hidden z-[100] flex justify-center items-center backdrop-blur-sm">
+        <div class="bg-slate-800 p-6 rounded-lg border border-slate-600 w-80 shadow-2xl">
+            <!-- Modified Modal Title -->
+            <h3 class="text-lg font-bold text-white mb-4">접근 모드</h3>
+            <input type="password" id="instructor-pwd" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white mb-4" placeholder="비밀번호 입력">
+            <div class="flex justify-end space-x-2">
+                <button onclick="toggleInstructorModal()" class="px-4 py-2 text-slate-400 hover:text-white">취소</button>
+                <button onclick="checkInstructorPwd()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentStep = 1;
+        let isInstructorMode = false;
+        let totalPenalty = 0;
+        
+        const state = {
+            prob: '',
+            cause: '',
+            ideas: [],
+            plans: []
+        };
+
+        const clues = {
+            1: "작년 '공격적인 무료 반품 정책'을 도입한 후 온라인 판매량이 급증했습니다.",
+            2: "물류 센터에서는 '반품된 제품의 검수 및 재포장 비용이 예상을 초과한다'는 보고가 올라오고 있습니다.",
+            3: "경쟁사 퓨처라이프는 구독형 유지보수 모델을 도입하여 초기 판매가는 낮추되 장기 수익을 확보하고 있습니다.",
+            4: "고객 설문조사 결과, 테크노바 제품은 '기능은 좋지만, 설치가 어렵다'는 의견이 40%를 차지했습니다."
+        };
+
+        // Clue Logic
+        function revealClue(id) {
+            const btn = document.getElementById(`clue-btn-${id}`);
+            const text = document.getElementById(`clue-text-${id}`);
+            
+            // If already revealed, do nothing
+            if(btn.classList.contains('clue-revealed')) return;
+
+            // Update State
+            totalPenalty += 2;
+            updatePenaltyDisplay();
+
+            // Update UI
+            btn.classList.add('clue-revealed');
+            btn.classList.remove('hover:border-blue-500');
+            
+            // Icon Change
+            const icon = btn.querySelector('i');
+            icon.classList.remove('fa-lock', 'text-slate-500');
+            icon.classList.add('fa-unlock', 'text-red-400');
+
+            // Text Change
+            text.innerHTML = `<span class="text-white">${clues[id]}</span>`;
+        }
+
+        function updatePenaltyDisplay() {
+            document.getElementById('penalty-display').innerText = `누적 감점: -${totalPenalty}점`;
+        }
+
+        // Navigation
+        function nextStep(step) {
+            // Hide all steps
+            document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+            
+            // Show target step
+            const target = document.getElementById(`step-${step}`);
+            target.classList.add('active');
+            target.classList.add('animate-fade-in');
+            
+            currentStep = step;
+            updateUIState();
+            window.scrollTo(0, 0);
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                nextStep(currentStep - 1);
+            }
+        }
+
+        function updateUIState() {
+            // Progress Indicator
+            document.getElementById('progress-indicator').innerText = `Step ${currentStep} / 6`;
+            
+            // Prev Button Visibility
+            const prevBtn = document.getElementById('prev-btn');
+            if (currentStep > 1) {
+                prevBtn.classList.remove('hidden');
+            } else {
+                prevBtn.classList.add('hidden');
+            }
+        }
+
+        // Evaluation Logic (Simulated AI)
+        function evaluateStep(type, keywords) {
+            const input = document.getElementById(`input-${type}`).value;
+            const resultDiv = document.getElementById(`result-${type}`);
+            const nextBtn = document.getElementById(`next-btn-${type}`);
+            
+            if (input.length < 10) {
+                alert("내용을 조금 더 구체적으로 작성해 주세요.");
+                return;
+            }
+
+            // Fake processing UI
+            resultDiv.innerHTML = '<span class="text-blue-400"><i class="fas fa-circle-notch fa-spin"></i> AI가 분석 중입니다...</span>';
+            
+            setTimeout(() => {
+                // Scoring Logic
+                let score = 50; 
+                if (input.length > 50) score += 10;
+                if (input.length > 100) score += 10;
+                
+                let matchCount = 0;
+                keywords.forEach(kw => {
+                    if (input.includes(kw)) matchCount++;
+                });
+                score += (matchCount * 10);
+                if (score > 98) score = 98; 
+
+                // Apply Penalty Effect? 
+                // Currently penalty is separate but we could subtract it here if requested.
+                // For now, penalty is just displayed separately as per prompt "누적 감점".
+
+                score += Math.floor(Math.random() * 5); 
+
+                if (score >= 80) {
+                    resultDiv.innerHTML = `<span class="text-green-400 text-lg">점수: ${score}점 <span class="text-xs text-slate-400">(통과)</span></span>`;
+                    nextBtn.classList.remove('hidden');
+                    state[type] = input; 
+                } else {
+                    resultDiv.innerHTML = `<span class="text-red-400 text-lg">점수: ${score}점 <span class="text-xs text-slate-400">(80점 필요)</span></span>`;
+                    alert("핵심 키워드가 부족하거나 내용이 빈약합니다. 다시 시도해 주세요.");
+                }
+            }, 1500);
+        }
+
+        // List Management (Ideas & Plans)
+        function addItem(type) {
+            const inputId = `input-${type}`;
+            const listId = `list-${type}`;
+            const nextBtnId = `next-btn-${type}`;
+            const inputVal = document.getElementById(inputId).value;
+
+            if (!inputVal) return;
+
+            const list = type === 'idea' ? state.ideas : state.plans;
+            list.push(inputVal);
+
+            // Render list
+            const li = document.createElement('li');
+            li.textContent = inputVal;
+            document.getElementById(listId).appendChild(li);
+            
+            document.getElementById(inputId).value = '';
+            document.getElementById(inputId).focus();
+
+            // Check completion
+            if (list.length >= 3) {
+                document.getElementById(nextBtnId).classList.remove('hidden');
+            }
+        }
+
+        // Finish Game
+        function finishGame() {
+            // Populate Summary
+            document.getElementById('final-prob').innerText = state.prob;
+            document.getElementById('final-cause').innerText = state.cause;
+            document.getElementById('final-penalty').innerText = `-${totalPenalty}점`;
+            
+            const ideaList = document.getElementById('final-idea');
+            state.ideas.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                ideaList.appendChild(li);
+            });
+
+            const planList = document.getElementById('final-plan');
+            state.plans.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                planList.appendChild(li);
+            });
+
+            nextStep(6);
+        }
+
+        // Instructor Mode
+        function toggleInstructorModal() {
+            const modal = document.getElementById('modal-backdrop');
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                document.getElementById('instructor-pwd').value = '';
+                document.getElementById('instructor-pwd').focus();
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function checkInstructorPwd() {
+            const pwd = document.getElementById('instructor-pwd').value;
+            if (pwd === '0512') {
+                isInstructorMode = true;
+                const btn = document.getElementById('instructor-btn');
+                
+                // Visual Change: Add red glow class instead of changing text
+                btn.classList.add('instructor-active');
+                
+                // Show all hidden guides
+                document.querySelectorAll('.instructor-only').forEach(el => el.classList.remove('hidden'));
+                
+                toggleInstructorModal();
+                alert("강사 모드가 활성화되었습니다. 각 단계별 정답 가이드가 표시됩니다.");
+            } else {
+                alert("비밀번호가 일치하지 않습니다.");
+            }
+        }
+    </script>
+</body>
+</html>
