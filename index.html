@@ -117,7 +117,7 @@
                 <i class="fas fa-robot text-blue-500 text-2xl"></i>
                 <div>
                     <h1 class="text-xl font-bold text-white tracking-wider">AI DETECTIVE</h1>
-                    <p class="text-xs text-slate-400">Business Case Solver v2.7</p>
+                    <p class="text-xs text-slate-400">Business Case Solver v2.8</p>
                 </div>
             </div>
             <div class="flex items-center space-x-4">
@@ -532,13 +532,13 @@
 
                 score += Math.floor(Math.random() * 5); 
 
-                // CHANGED: Threshold from 80 to 70
-                if (score >= 70) {
+                // Threshold restored to 80
+                if (score >= 80) {
                     resultDiv.innerHTML = `<span class="text-green-400 text-lg">점수: ${score}점 <span class="text-xs text-slate-400">(통과)</span></span>`;
                     nextBtn.classList.remove('hidden');
                     state[type] = input; 
                 } else {
-                    resultDiv.innerHTML = `<span class="text-red-400 text-lg">점수: ${score}점 <span class="text-xs text-slate-400">(70점 필요)</span></span>`;
+                    resultDiv.innerHTML = `<span class="text-red-400 text-lg">점수: ${score}점 <span class="text-xs text-slate-400">(80점 필요)</span></span>`;
                     alert("핵심 키워드가 부족하거나 내용이 빈약합니다. 다시 시도해 주세요.");
                 }
             }, 1500);
